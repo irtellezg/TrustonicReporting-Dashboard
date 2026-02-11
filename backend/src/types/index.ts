@@ -107,9 +107,24 @@ export interface AutomationLog {
     created_at?: Date;
 }
 
+export interface MonthlyTrack {
+    id?: string;
+    source_file_id?: string;
+    country: string;
+    customer: string;
+    solution: string;
+    record_date: string;
+    registered: number;
+    activated: number;
+    total_billable: number;
+    created_at?: Date;
+    updated_at?: Date;
+}
+
 export interface ExcelParseResult {
     devices: Device[];
     inventory: InventoryItem[];
+    monthlyTracks: MonthlyTrack[];
     sheetCount: number;
     errors: ParseError[];
 }
@@ -128,6 +143,7 @@ export interface ETLResult {
     devicesSkipped: number;
     inventoryInserted: number;
     inventoryUpdated: number;
+    monthlyTracksInserted: number;
     errors: ParseError[];
     durationMs: number;
 }

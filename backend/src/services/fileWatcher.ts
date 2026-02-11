@@ -13,6 +13,7 @@ import {
     isFileAlreadyProcessed,
     loadDevices,
     loadInventory,
+    loadMonthlyTracks,
     logAutomation
 } from './databaseLoader';
 import { ETLResult } from '../types';
@@ -21,7 +22,7 @@ let currentWatcher: chokidar.FSWatcher | null = null;
 let currentOptions: WatcherOptions | null = null;
 
 // Extensiones de archivo válidas
-const VALID_EXTENSIONS = ['.xlsx', '.xls'];
+const VALID_EXTENSIONS = ['.xlsx', '.xls', '.csv'];
 
 // Delay para asegurar que el archivo terminó de escribirse
 const FILE_STABILITY_DELAY_MS = 2000;
@@ -136,6 +137,7 @@ export async function processFile(filePath: string): Promise<ETLResult> {
             devicesSkipped: 0,
             inventoryInserted: 0,
             inventoryUpdated: 0,
+            monthlyTracksInserted: 0,
             errors: [],
             durationMs: Date.now() - startTime,
         };
@@ -197,6 +199,22 @@ export async function processFile(filePath: string): Promise<ETLResult> {
             duration_ms: Date.now() - startTime,
         });
 
+        // Cargar seguimiento mensual (si existe)
+        let monthlyTracksInserted = 0;
+        if (parseResult.monthlyTracks.length > 0) {
+            const monthlyResult = await loadMonthlyTracks(parseResult.monthlyTracks, fileId);
+            monthlyTracksInserted = monthlyResult.inserted;
+            console.log(`📊 Seguimiento mensual: ${monthlyTracksInserted} registros procesados`);
+
+            await logAutomation({
+                file_id: fileId,
+                action: 'LOAD_MONTHLY_TRACK',
+                table_name: 'monthly_tracking',
+                rows_inserted: monthlyTracksInserted,
+                duration_ms: Date.now() - startTime,
+            });
+        }
+
         // Actualizar estado del archivo
         await updateFileStatus(fileId, 'COMPLETED', {
             devices: deviceResult.inserted + deviceResult.updated,
@@ -210,6 +228,7 @@ export async function processFile(filePath: string): Promise<ETLResult> {
             devicesSkipped: deviceResult.skipped,
             inventoryInserted: inventoryResult.inserted,
             inventoryUpdated: inventoryResult.updated,
+            monthlyTracksInserted,
             errors,
             durationMs: Date.now() - startTime,
         };
@@ -274,6 +293,7 @@ export async function processAllFiles(folderPath: string): Promise<ETLResult[]> 
                     devicesSkipped: 0,
                     inventoryInserted: 0,
                     inventoryUpdated: 0,
+                    monthlyTracksInserted: 0,
                     errors: [{
                         sheet: 'N/A',
                         row: 0,

@@ -13,17 +13,24 @@ import {
     normalizeStatus,
     IGNORED_COLUMNS
 } from '../config/columnMapping';
-import { Device, InventoryItem, ExcelParseResult, ParseError } from '../types';
+import { Device, InventoryItem, MonthlyTrack, ExcelParseResult, ParseError } from '../types';
 
 /**
- * Parsea un archivo Excel y extrae dispositivos e inventario
+ * Parsea un archivo (Excel o CSV) y extrae dispositivos, inventario o seguimiento mensual
  */
 export async function parseExcelFile(filePath: string, defaultBrand?: string): Promise<ExcelParseResult> {
+    const ext = path.extname(filePath).toLowerCase();
+
+    if (ext === '.csv') {
+        return parseCsvFile(filePath);
+    }
+
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(filePath);
 
     const devices: Device[] = [];
     const inventory: InventoryItem[] = [];
+    const monthlyTracks: MonthlyTrack[] = [];
     const errors: ParseError[] = [];
 
     workbook.eachSheet((worksheet, sheetId) => {
@@ -45,8 +52,74 @@ export async function parseExcelFile(filePath: string, defaultBrand?: string): P
     return {
         devices,
         inventory,
+        monthlyTracks,
         sheetCount: workbook.worksheets.length,
         errors,
+    };
+}
+
+/**
+ * Parsea un archivo CSV (específicamente monthly_track.csv)
+ */
+async function parseCsvFile(filePath: string): Promise<ExcelParseResult> {
+    const fs = await import('fs/promises');
+    // Leemos con utf16le ya que detectamos ese encoding
+    const content = await fs.readFile(filePath, 'utf16le');
+    const lines = content.split(/\r?\n/);
+
+    const monthlyTracks: MonthlyTrack[] = [];
+    const errors: ParseError[] = [];
+
+    if (lines.length < 2) {
+        return { devices: [], inventory: [], monthlyTracks: [], sheetCount: 1, errors: [] };
+    }
+
+    // Encabezados: Country	Customer	Solution	Record Date	Registered	Activated
+    const headers = lines[0].split('\t').map(h => h.trim());
+    const countryIdx = headers.indexOf('Country');
+    const customerIdx = headers.indexOf('Customer');
+    const solutionIdx = headers.indexOf('Solution');
+    const dateIdx = headers.indexOf('Record Date');
+    const registeredIdx = headers.indexOf('Registered');
+    const activatedIdx = headers.indexOf('Activated');
+    const billableIdx = headers.indexOf('Total Billable');
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const cols = line.split('\t');
+        if (cols.length < 5) continue;
+
+        try {
+            const recordDate = cols[dateIdx]?.trim();
+            // Validar formato YYYY-MM o similar
+            const formattedDate = recordDate ? `${recordDate}-01` : '';
+
+            monthlyTracks.push({
+                country: cols[countryIdx]?.trim() || 'N/A',
+                customer: cols[customerIdx]?.trim() || 'N/A',
+                solution: cols[solutionIdx]?.trim() || 'N/A',
+                record_date: formattedDate,
+                registered: parseFloat(cols[registeredIdx] || '0'),
+                activated: parseFloat(cols[activatedIdx] || '0'),
+                total_billable: parseFloat(cols[billableIdx] || '0')
+            });
+        } catch (err) {
+            errors.push({
+                sheet: 'CSV',
+                row: i + 1,
+                message: `Error parseando fila: ${err instanceof Error ? err.message : 'Desconocido'}`
+            });
+        }
+    }
+
+    return {
+        devices: [],
+        inventory: [],
+        monthlyTracks,
+        sheetCount: 1,
+        errors
     };
 }
 

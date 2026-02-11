@@ -10,21 +10,24 @@ import type {
   StatusSummary,
   RegionSummary,
   SolutionSummary,
+  BrandSummary,
+  CustomerSummary,
   Device,
   InventoryItem,
   FilterOptions,
 } from './services/api';
 import { KPICards } from './components/KPICards';
-import { StatusChart, RegionChart, SolutionChart } from './components/Charts';
+import { StatusChart, RegionChart, SolutionChart, BrandChart, CustomerChart } from './components/Charts';
 import { DevicesTable } from './components/DevicesTable';
 import { Filters } from './components/Filters';
 import { exportToPDF } from './services/pdfExport';
 import { SettingsView } from './components/SettingsView';
 import { InventoryTable } from './components/InventoryTable';
+import { CustomerTrackingView } from './components/CustomerTrackingView';
 import { useNotification } from './context/NotificationContext';
 
 
-type View = 'dashboard' | 'devices' | 'inventory' | 'settings';
+type View = 'dashboard' | 'devices' | 'inventory' | 'tracking' | 'settings';
 
 function App() {
   const { showNotification } = useNotification();
@@ -36,6 +39,8 @@ function App() {
   const [statusData, setStatusData] = useState<StatusSummary[]>([]);
   const [regionData, setRegionData] = useState<RegionSummary[]>([]);
   const [solutionData, setSolutionData] = useState<SolutionSummary[]>([]);
+  const [brandData, setBrandData] = useState<BrandSummary[]>([]);
+  const [customerData, setCustomerData] = useState<CustomerSummary[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [inventoryTotal, setInventoryTotal] = useState(0);
@@ -80,11 +85,13 @@ function App() {
       if (filters.solution) commonParams.solution = filters.solution;
       if (filters.brand) commonParams.brand = filters.brand;
 
-      const [kpiRes, statusRes, regionRes, solutionRes, filterRes, invRes] = await Promise.all([
+      const [kpiRes, statusRes, regionRes, solutionRes, brandRes, customerRes, filterRes, invRes] = await Promise.all([
         api.getKPIs(commonParams),
         api.getStatusSummary(commonParams),
         api.getRegionSummary(commonParams),
         api.getSolutionSummary(commonParams),
+        api.getBrandSummary(commonParams),
+        api.getCustomerSummary(commonParams),
         api.getFilterOptions(commonParams),
         api.getInventory({ limit: '100', offset: '0' })
       ]);
@@ -93,6 +100,8 @@ function App() {
       setStatusData(statusRes);
       setRegionData(regionRes);
       setSolutionData(solutionRes);
+      setBrandData(brandRes);
+      setCustomerData(customerRes);
       setFilterOptions(filterRes);
       setInventory(invRes.items);
       setInventoryTotal(invRes.total);
@@ -231,24 +240,111 @@ function App() {
   }
 
   async function handleExportPDF() {
-    await exportToPDF({
-      title: 'TrustonicReporting',
-      subtitle: new Date().toLocaleDateString('es-MX', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      filters: {
-        Región: filters.region,
-        Cliente: filters.customer,
-        Estado: filters.status,
-        Solución: filters.solution,
-        Marca: filters.brand,
-      },
-      kpis: kpis || undefined,
-      devices,
-      chartsElement: chartsRef.current || undefined,
-    });
+    setLoading(true);
+    try {
+      showNotification({
+        type: 'info',
+        title: 'Generando Reporte',
+        message: 'Obteniendo datos completos para el PDF...',
+      });
+
+      if (view === 'tracking') {
+        const yearVal = (document.getElementById('tracking-year-filter') as HTMLSelectElement)?.value;
+        const customerVal = (document.getElementById('tracking-customer-filter') as HTMLSelectElement)?.value;
+        const countryVal = (document.getElementById('tracking-country-filter') as HTMLSelectElement)?.value;
+        const solutionVal = (document.getElementById('tracking-solution-filter') as HTMLSelectElement)?.value;
+
+        const activeFilters: string[] = [];
+        if (yearVal) activeFilters.push(yearVal);
+        if (customerVal) activeFilters.push(customerVal);
+        if (countryVal) activeFilters.push(countryVal);
+        if (solutionVal) activeFilters.push(solutionVal);
+
+        const filterWording = activeFilters.length > 0
+          ? `(${activeFilters.join(', ')})`
+          : '';
+
+        // Exportación específica para seguimiento
+        await exportToPDF({
+          title: `Seguimiento de Clientes ${filterWording}`.trim(),
+          subtitle: `Generado el ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+          filters: {
+            Año: yearVal,
+            Cliente: customerVal,
+            País: countryVal,
+            Solución: solutionVal
+          },
+          chartsElement: document.querySelector('.tracking-report-content') as HTMLElement || undefined,
+        });
+      }
+      else {
+        // Fetch all devices matching current filters (without pagination limit)
+        const params: Record<string, string> = {
+          limit: '5000', // Suficiente para "todos" los dispositivos
+          offset: '0',
+        };
+
+        if (filters.region) params.region = filters.region;
+        if (filters.customer) params.customer = filters.customer;
+        if (filters.status) params.status = filters.status;
+        if (filters.solution) params.solution = filters.solution;
+        if (filters.brand) params.brand = filters.brand;
+        if (filters.search) params.search = filters.search;
+
+        if (sorting.length > 0) {
+          params.sortBy = sorting[0].id;
+          params.sortDir = sorting[0].desc ? 'DESC' : 'ASC';
+        }
+
+        const result = await api.getDevices(params);
+
+        const activeFilterValues: string[] = [];
+        if (filters.region) activeFilterValues.push(filters.region);
+        if (filters.customer) activeFilterValues.push(filters.customer);
+        if (filters.status) activeFilterValues.push(filters.status);
+        if (filters.solution) activeFilterValues.push(filters.solution);
+        if (filters.brand) activeFilterValues.push(filters.brand);
+
+        const filterWording = activeFilterValues.length > 0
+          ? `Solo para ${activeFilterValues.join(', ')}`
+          : 'Reporte General';
+
+        await exportToPDF({
+          title: `Validación: ${filterWording}`,
+          subtitle: `Generado el ${new Date().toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}`,
+          filters: {
+            Región: filters.region,
+            Cliente: filters.customer,
+            Estado: filters.status,
+            Solución: filters.solution,
+            Marca: filters.brand,
+            Búsqueda: filters.search,
+          },
+          kpis: kpis || undefined,
+          devices: result.devices,
+          chartsElement: chartsRef.current || undefined,
+        });
+      }
+
+      showNotification({
+        type: 'success',
+        title: 'Reporte listo',
+        message: 'El PDF se ha generado correctamente.',
+      });
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      showNotification({
+        type: 'error',
+        title: 'Error de Exportación',
+        message: 'No se pudo generar el reporte PDF.',
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -283,6 +379,13 @@ function App() {
             Inventario
           </div>
           <div
+            className={`nav-item ${view === 'tracking' ? 'active' : ''}`}
+            onClick={() => setView('tracking')}
+          >
+            <span>📈</span>
+            Seguimiento
+          </div>
+          <div
             className={`nav-item ${view === 'settings' ? 'active' : ''}`}
             onClick={() => setView('settings')}
           >
@@ -306,7 +409,8 @@ function App() {
           <h1 className="page-title">
             {view === 'dashboard' ? 'Dashboard de Validación' :
               view === 'devices' ? 'Lista de Dispositivos' :
-                view === 'inventory' ? 'Inventario de Dispositivos' : 'Configuración del Sistema'}
+                view === 'inventory' ? 'Inventario de Dispositivos' :
+                  view === 'tracking' ? 'Seguimiento de Clientes' : 'Configuración del Sistema'}
           </h1>
           <div className="header-actions">
             {view !== 'settings' && (
@@ -318,7 +422,7 @@ function App() {
         </div>
 
         {/* Filters */}
-        {view !== 'settings' && view !== 'inventory' && (
+        {view !== 'settings' && view !== 'inventory' && view !== 'tracking' && (
           <Filters
             filters={filters}
             options={filterOptions}
@@ -338,6 +442,11 @@ function App() {
                 <div className="charts-grid">
                   <StatusChart data={statusData} />
                   <RegionChart data={regionData} />
+                </div>
+
+                <div className="charts-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  <BrandChart data={brandData} />
+                  <CustomerChart data={customerData} />
                 </div>
 
                 <div className="charts-grid" style={{ gridTemplateColumns: '1fr' }}>
@@ -381,6 +490,9 @@ function App() {
             </div>
           )
         }
+
+        {/* Tracking View */}
+        {view === 'tracking' && <CustomerTrackingView />}
 
         {/* Settings View */}
         {view === 'settings' && <SettingsView />}

@@ -12,9 +12,13 @@ import {
     getStatusSummary,
     getRegionSummary,
     getSolutionSummary,
+    getBrandSummary,
+    getCustomerSummary,
     getDevices,
     getFilterOptions,
     getInventoryItems,
+    getMonthlyTracking,
+    getCustomerTrackingOptions,
     clearAllData,
     deleteDevices,
     deleteInventoryItems,
@@ -72,6 +76,18 @@ router.get('/dashboard/regions', asyncHandler(async (req, res) => {
 // Solution summary
 router.get('/dashboard/solutions', asyncHandler(async (req, res) => {
     const summary = await getSolutionSummary(getCommonFilters(req));
+    res.json(summary);
+}));
+
+// Brand summary
+router.get('/dashboard/brands', asyncHandler(async (req, res) => {
+    const summary = await getBrandSummary(getCommonFilters(req));
+    res.json(summary);
+}));
+
+// Customer summary
+router.get('/dashboard/customers', asyncHandler(async (req, res) => {
+    const summary = await getCustomerSummary(getCommonFilters(req));
     res.json(summary);
 }));
 
@@ -303,6 +319,31 @@ router.delete('/inventory', asyncHandler(async (req, res) => {
         console.error('API Error deleting inventory:', error);
         res.status(500).json({ error: 'Internal Server Error', message: (error as Error).message });
     }
+}));
+
+// Get customer tracking data
+router.get('/tracking', asyncHandler(async (req, res) => {
+    const filters = {
+        customer: req.query.customer as string | undefined,
+        country: req.query.country as string | undefined,
+        solution: req.query.solution as string | undefined,
+        year: req.query.year as string | undefined,
+    };
+
+    const data = await getMonthlyTracking(filters);
+    res.json(data);
+}));
+
+// Get tracking filter options
+router.get('/tracking/options', asyncHandler(async (req, res) => {
+    const filters = {
+        customer: req.query.customer as string | undefined,
+        country: req.query.country as string | undefined,
+        solution: req.query.solution as string | undefined,
+        year: req.query.year as string | undefined,
+    };
+    const options = await getCustomerTrackingOptions(filters);
+    res.json(options);
 }));
 
 export default router;

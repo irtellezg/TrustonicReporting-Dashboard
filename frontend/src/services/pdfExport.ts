@@ -169,8 +169,8 @@ export async function exportToPDF(options: ExportOptions): Promise<void> {
         yPos += 8;
 
         // Table headers
-        const headers = ['Marca', 'Dispositivo', 'Modelo', 'Región', 'Cliente', 'Estado'];
-        const colWidths = [30, 45, 40, 35, 50, 30];
+        const headers = ['Marca', 'Dispositivo', 'Modelo', 'Región', 'Cliente', 'Solución', 'Estado'];
+        const colWidths = [25, 40, 35, 30, 45, 30, 25];
 
         pdf.setFillColor(243, 244, 246);
         pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
@@ -191,8 +191,7 @@ export async function exportToPDF(options: ExportOptions): Promise<void> {
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(55, 65, 81);
 
-        const maxRows = 200; // Aumentamos para que quiten más dispositivos (ej. los 168 actuales)
-        const displayDevices = devices.slice(0, maxRows);
+        const displayDevices = devices; // Mostrar todos los dispositivos recibidos
 
         displayDevices.forEach((device, rowIndex) => {
             if (yPos > pageHeight - 20) {
@@ -214,6 +213,7 @@ export async function exportToPDF(options: ExportOptions): Promise<void> {
                 device.model || '-',
                 device.target_region || '-',
                 device.target_customer || '-',
+                device.target_solution || '-',
                 device.status || '-',
             ];
 
@@ -226,12 +226,6 @@ export async function exportToPDF(options: ExportOptions): Promise<void> {
             yPos += 7;
         });
 
-        if (devices.length > maxRows) {
-            yPos += 5;
-            pdf.setFontSize(9);
-            pdf.setTextColor(107, 114, 128);
-            pdf.text(`... y ${devices.length - maxRows} dispositivos más`, margin, yPos);
-        }
     }
 
     // Footer

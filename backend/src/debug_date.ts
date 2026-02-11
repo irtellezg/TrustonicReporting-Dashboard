@@ -9,6 +9,10 @@ async function test() {
     console.log('Reading:', filePath);
     await workbook.xlsx.readFile(filePath);
     const sheet = workbook.getWorksheet(1);
+    if (!sheet) {
+        console.error('Sheet not found');
+        return;
+    }
     const headerRow = sheet.getRow(1);
 
     // Buscar la fila de Blu G65L

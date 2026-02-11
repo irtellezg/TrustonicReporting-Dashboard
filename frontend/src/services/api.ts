@@ -76,6 +76,16 @@ export interface SolutionSummary {
     with_issues: number;
 }
 
+export interface BrandSummary {
+    brand: string;
+    device_count: number;
+}
+
+export interface CustomerSummary {
+    customer: string;
+    device_count: number;
+}
+
 export interface Device {
     id: string;
     brand: string;
@@ -135,6 +145,24 @@ export interface DevicesResponse {
     total: number;
 }
 
+export interface MonthlyTrack {
+    id: string;
+    country: string;
+    customer: string;
+    solution: string;
+    record_date: string;
+    registered: number;
+    activated: number;
+    total_billable: number;
+}
+
+export interface TrackingOptions {
+    customers: string[];
+    countries: string[];
+    solutions: string[];
+    years: string[];
+}
+
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const response = await fetch(`${getAPIBase()}${endpoint}`, {
         headers: {
@@ -167,6 +195,14 @@ export const api = {
     getSolutionSummary: (params?: Record<string, string>) => {
         const query = params ? `?${new URLSearchParams(params)}` : '';
         return fetchAPI<SolutionSummary[]>(`/dashboard/solutions${query}`);
+    },
+    getBrandSummary: (params?: Record<string, string>) => {
+        const query = params ? `?${new URLSearchParams(params)}` : '';
+        return fetchAPI<BrandSummary[]>(`/dashboard/brands${query}`);
+    },
+    getCustomerSummary: (params?: Record<string, string>) => {
+        const query = params ? `?${new URLSearchParams(params)}` : '';
+        return fetchAPI<CustomerSummary[]>(`/dashboard/customers${query}`);
     },
 
     // Devices
@@ -241,6 +277,18 @@ export const api = {
         method: 'DELETE',
         body: JSON.stringify({ ids })
     }),
+
+    // Customer Tracking
+    getTracking: (params?: Record<string, string>) => {
+        const query = params ? `?${new URLSearchParams(params)}` : '';
+        return fetchAPI<MonthlyTrack[]>(`/tracking${query}`);
+    },
+
+    getTrackingOptions: (params?: Record<string, string>) => {
+        const queryParams = params ? new URLSearchParams(params).toString() : '';
+        const query = queryParams ? `?${queryParams}` : '';
+        return fetchAPI<TrackingOptions>(`/tracking/options${query}`);
+    },
 };
 
 export default api;

@@ -7,7 +7,7 @@ import { PoolClient } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 import { pool, transaction, query, SCHEMA } from '../config/database';
-import { Device, InventoryItem, ProcessedFile, AutomationLog, ETLResult } from '../types';
+import { Device, InventoryItem, MonthlyTrack, ProcessedFile, AutomationLog, ETLResult } from '../types';
 
 /**
  * Registra un archivo como procesado
@@ -320,8 +320,45 @@ export async function loadInventory(
 }
 
 /**
- * Registra un log de automatización
+ * Carga seguimiento mensual en la base de datos con detección de duplicados
  */
+export async function loadMonthlyTracks(
+    tracks: MonthlyTrack[],
+    fileId: string
+): Promise<{ inserted: number }> {
+    let inserted = 0;
+
+    await transaction(async (client) => {
+        for (const track of tracks) {
+            await client.query(
+                `INSERT INTO ${SCHEMA}.monthly_tracking (
+                    source_file_id, country, customer, solution, 
+                    record_date, registered, activated, total_billable, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                ON CONFLICT (country, customer, solution, record_date) 
+                DO UPDATE SET 
+                    source_file_id = EXCLUDED.source_file_id,
+                    registered = EXCLUDED.registered,
+                    activated = EXCLUDED.activated,
+                    total_billable = EXCLUDED.total_billable,
+                    updated_at = NOW()`,
+                [
+                    fileId,
+                    track.country,
+                    track.customer,
+                    track.solution,
+                    track.record_date,
+                    track.registered,
+                    track.activated,
+                    track.total_billable
+                ]
+            );
+            inserted++;
+        }
+    });
+
+    return { inserted };
+}
 export async function logAutomation(log: Omit<AutomationLog, 'id' | 'created_at'>): Promise<void> {
     await query(
         `INSERT INTO ${SCHEMA}.automation_logs 
@@ -573,6 +610,55 @@ export async function getSolutionSummary(filters?: any): Promise<Array<{
 }
 
 /**
+ * Obtiene resumen por marca con filtros
+ */
+export async function getBrandSummary(filters?: any): Promise<Array<{
+    brand: string;
+    device_count: number;
+}>> {
+    const { whereClause, params } = buildWhereClause(filters);
+
+    return query(
+        `SELECT 
+            brand,
+            COUNT(*) as device_count
+        FROM ${SCHEMA}.devices
+        ${whereClause}
+        GROUP BY brand
+        ORDER BY device_count DESC`,
+        params
+    );
+}
+
+/**
+ * Obtiene resumen por cliente con filtros
+ */
+export async function getCustomerSummary(filters?: any): Promise<Array<{
+    customer: string;
+    device_count: number;
+}>> {
+    const { whereClause, params } = buildWhereClause(filters);
+
+    return query(
+        `WITH split_customers AS (
+            SELECT 
+                trim(c)::VARCHAR(100) as customer
+            FROM ${SCHEMA}.devices, 
+                 unnest(string_to_array(target_customer, ',')) AS c 
+            ${whereClause}
+        )
+        SELECT 
+            customer,
+            COUNT(*) as device_count
+        FROM split_customers
+        WHERE customer != ''
+        GROUP BY customer
+        ORDER BY device_count DESC`,
+        params
+    );
+}
+
+/**
  * Obtiene dispositivos con filtros
  */
 export async function getDevices(filters?: {
@@ -806,6 +892,7 @@ export async function clearAllData(): Promise<void> {
         await client.query(`DELETE FROM ${SCHEMA}.automation_logs`);
         await client.query(`DELETE FROM ${SCHEMA}.devices`);
         await client.query(`DELETE FROM ${SCHEMA}.inventory`);
+        await client.query(`DELETE FROM ${SCHEMA}.monthly_tracking`);
         await client.query(`DELETE FROM ${SCHEMA}.processed_files`);
     });
 }
@@ -836,3 +923,115 @@ export async function deleteInventoryItems(ids: string[]): Promise<void> {
     }
 }
 
+/**
+ * Obtiene datos de seguimiento mensual para los gráficos
+ */
+export async function getMonthlyTracking(filters?: {
+    customer?: string;
+    country?: string;
+    solution?: string;
+    year?: string;
+}): Promise<MonthlyTrack[]> {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let pIdx = 1;
+
+    if (filters?.customer) {
+        conditions.push(`customer = $${pIdx++}`);
+        params.push(filters.customer);
+    }
+    if (filters?.country) {
+        conditions.push(`country = $${pIdx++}`);
+        params.push(filters.country);
+    }
+    if (filters?.solution) {
+        conditions.push(`solution = $${pIdx++}`);
+        params.push(filters.solution);
+    }
+    if (filters?.year) {
+        conditions.push(`EXTRACT(YEAR FROM record_date) = $${pIdx++}`);
+        params.push(filters.year);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    return query<MonthlyTrack>(
+        `SELECT * FROM ${SCHEMA}.monthly_tracking ${where} ORDER BY record_date ASC`,
+        params
+    );
+}
+
+/**
+ * Obtiene lista de opciones únicas para el seguimiento de clientes
+ */
+export async function getCustomerTrackingOptions(filters?: {
+    customer?: string;
+    country?: string;
+    solution?: string;
+    year?: string;
+}): Promise<{
+    customers: string[];
+    countries: string[];
+    solutions: string[];
+    years: string[];
+}> {
+    const buildQuery = (column: string) => {
+        const localParams: any[] = [];
+        let localPIdx = 1;
+
+        const whereClauses: string[] = [];
+        whereClauses.push(`${column === 'year' ? 'record_date' : column} IS NOT NULL`);
+
+        // Solo agregamos filtros si tienen valor y no son para la columna que estamos consultando
+        if (filters?.customer && filters.customer !== '' && column !== 'customer') {
+            whereClauses.push(`customer = $${localPIdx++}`);
+            localParams.push(filters.customer);
+        }
+        if (filters?.country && filters.country !== '' && column !== 'country') {
+            whereClauses.push(`country = $${localPIdx++}`);
+            localParams.push(filters.country);
+        }
+        if (filters?.solution && filters.solution !== '' && column !== 'solution') {
+            whereClauses.push(`solution = $${localPIdx++}`);
+            localParams.push(filters.solution);
+        }
+        if (filters?.year && filters.year !== '' && column !== 'year') {
+            whereClauses.push(`EXTRACT(YEAR FROM record_date)::text = $${localPIdx++}`);
+            localParams.push(filters.year);
+        }
+
+        const where = `WHERE ${whereClauses.join(' AND ')}`;
+        const selectCol = column === 'year' ? 'DISTINCT EXTRACT(YEAR FROM record_date)::text as val' : `DISTINCT ${column} as val`;
+        const orderCol = column === 'year' ? 'val DESC' : 'val';
+
+        return {
+            sql: `SELECT ${selectCol} FROM ${SCHEMA}.monthly_tracking ${where} ORDER BY ${orderCol}`,
+            params: localParams
+        };
+    };
+
+    try {
+        const qCustomers = buildQuery('customer');
+        const qCountries = buildQuery('country');
+        const qSolutions = buildQuery('solution');
+        const qYears = buildQuery('year');
+
+        const [customers, countries, solutions, years] = await Promise.all([
+            query<{ val: string }>(qCustomers.sql, qCustomers.params),
+            query<{ val: string }>(qCountries.sql, qCountries.params),
+            query<{ val: string }>(qSolutions.sql, qSolutions.params),
+            query<{ val: string }>(qYears.sql, qYears.params)
+        ]);
+
+        return {
+            customers: customers.map(r => r.val).filter(v => v),
+            countries: countries.map(r => r.val).filter(v => v),
+            solutions: solutions.map(r => r.val).filter(v => v),
+            years: years.map(r => r.val).filter(v => v)
+        };
+    } catch (error) {
+        console.error('Error in getCustomerTrackingOptions:', error);
+        // Retornar listas vacías si falla pero no tirar la app
+        return { customers: [], countries: [], solutions: [], years: [] };
+    }
+}
