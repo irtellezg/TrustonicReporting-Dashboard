@@ -15,6 +15,7 @@ import type { SortingState, ColumnFiltersState, VisibilityState, OnChangeFn } fr
 import type { Device } from '../services/api';
 import api from '../services/api';
 import { useNotification } from '../context/NotificationContext';
+import { useLanguage } from '../context/LanguageContext';
 
 
 const columnHelper = createColumnHelper<Device>();
@@ -48,6 +49,7 @@ export function DevicesTable({
     onGlobalFilterChange,
 }: DevicesTableProps) {
     const { showNotification, confirm } = useNotification();
+    const { t, language } = useLanguage();
     // const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
@@ -209,11 +211,11 @@ export function DevicesTable({
                 ),
             }),
             columnHelper.accessor('brand', {
-                header: 'Marca',
+                header: t('brand'),
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('device', {
-                header: 'Nombre',
+                header: t('name') || 'Nombre',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('device_type', {
@@ -221,11 +223,11 @@ export function DevicesTable({
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('project', {
-                header: 'Proyecto',
+                header: t('project') || 'Proyecto',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('model', {
-                header: 'Modelo',
+                header: t('model') || 'Modelo',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('build', {
@@ -237,11 +239,11 @@ export function DevicesTable({
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('target_region', {
-                header: 'Región',
+                header: t('region') || 'Región',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('target_customer', {
-                header: 'Cliente',
+                header: t('customer') || 'Cliente',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('android_version', {
@@ -257,21 +259,21 @@ export function DevicesTable({
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('target_solution', {
-                header: 'Solución',
+                header: t('solution') || 'Solución',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('integration_requirement', {
-                header: 'Requerimiento',
+                header: t('requirement') || 'Requerimiento',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('status', {
-                header: 'Estado',
+                header: t('status') || 'Estado',
                 cell: (info) => {
                     const status = info.getValue();
                     const statusClass = status?.toLowerCase().replace(' ', '-') || '';
                     return (
                         <span className={`status-badge ${statusClass}`}>
-                            {status || 'Sin estado'}
+                            {status || t('no_status')}
                         </span>
                     );
                 },
@@ -281,15 +283,15 @@ export function DevicesTable({
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('contact', {
-                header: 'Contacto',
+                header: t('contact') || 'Contacto',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('priority', {
-                header: 'Prioridad',
+                header: t('priority') || 'Prioridad',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('approved_date', {
-                header: 'Aprobado',
+                header: t('approved') || 'Aprobado',
                 cell: (info) => {
                     const val = info.getValue();
                     return val ? String(val).split('T')[0] : '-';
@@ -342,14 +344,14 @@ export function DevicesTable({
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('comments', {
-                header: 'Comentarios',
+                header: t('comments') || 'Comentarios',
                 cell: (info) => info.getValue() || '-',
             }),
             columnHelper.accessor('updated_at', {
-                header: 'Actualizado',
+                header: t('updated') || 'Actualizado',
                 cell: (info) => {
                     const date = info.getValue();
-                    return date ? new Date(date).toLocaleDateString('es-MX') : '-';
+                    return date ? new Date(date).toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US') : '-';
                 },
             }),
         ],
@@ -387,8 +389,8 @@ export function DevicesTable({
         if (selectedIds.length === 0) return;
 
         const confirmed = await confirm(
-            'Eliminar Dispositivos',
-            `¿Estás seguro de que deseas eliminar los ${selectedIds.length} dispositivos seleccionados?`
+            t('confirm_delete_title'),
+            t('confirm_delete_message', { count: selectedIds.length })
         );
 
         if (!confirmed) return;
@@ -399,16 +401,16 @@ export function DevicesTable({
             setRowSelection({});
             showNotification({
                 type: 'success',
-                title: 'Eliminados',
-                message: `${selectedIds.length} dispositivos han sido eliminados.`
+                title: t('success_title'),
+                message: t('success_title')
             });
             onRefresh();
         } catch (error) {
             console.error('Error deleting devices:', error);
             showNotification({
                 type: 'error',
-                title: 'Error al Eliminar',
-                message: error instanceof Error ? error.message : 'No se pudieron eliminar los registros.'
+                title: t('error_title'),
+                message: error instanceof Error ? error.message : t('error_title')
             });
         } finally {
             setDeleting(false);
@@ -421,7 +423,7 @@ export function DevicesTable({
     return (
         <div className="card">
             <div className="card-header" style={{ borderBottom: 'none' }}>
-                <h3 className="card-title">Dispositivos ({total.toLocaleString()})</h3>
+                <h3 className="card-title">{t('devices')} ({total.toLocaleString()})</h3>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {selectedCount > 0 && (
                         <button
@@ -430,7 +432,7 @@ export function DevicesTable({
                             onClick={handleDeleteSelected}
                             disabled={deleting}
                         >
-                            🗑️ Eliminar ({selectedCount})
+                            🗑️ {t('delete_selected', { count: selectedCount })}
                         </button>
                     )}
                     <div className="column-toggle-container" ref={dropdownRef}>
@@ -439,13 +441,13 @@ export function DevicesTable({
                             onClick={() => setShowColumnToggle(!showColumnToggle)}
                             style={{ fontSize: '13px' }}
                         >
-                            ⚙️ Columnas
+                            ⚙️ {t('columns')}
                         </button>
 
                         {showColumnToggle && (
                             <div className="column-toggle-dropdown scale-in">
                                 <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px', fontWeight: 600, fontSize: '12px', color: '#64748b' }}>
-                                    MOSTRAR COLUMNAS
+                                    {t('show_columns')}
                                 </div>
                                 {table.getAllLeafColumns()
                                     .filter(col => col.id !== 'select')
@@ -496,7 +498,7 @@ export function DevicesTable({
                         }}>🔍</span>
                         <input
                             type="text"
-                            placeholder="Buscador global: marca, nombre, modelo, TAC, cliente, solución, estado..."
+                            placeholder={t('search_placeholder')}
                             style={{
                                 width: '100%',
                                 padding: '14px 16px 14px 48px',
@@ -587,7 +589,7 @@ export function DevicesTable({
                 {loading ? (
                     <div className="loading-container">
                         <div className="loading-spinner"></div>
-                        <span>Cargando dispositivos...</span>
+                        <span>{t('loading_devices')}</span>
                     </div>
                 ) : (
                     <table className="data-table">
@@ -620,7 +622,7 @@ export function DevicesTable({
                             {table.getRowModel().rows.length === 0 ? (
                                 <tr>
                                     <td colSpan={columns.length} style={{ textAlign: 'center', padding: '40px' }}>
-                                        No se encontraron dispositivos
+                                        {t('no_devices_found')}
                                     </td>
                                 </tr>
                             ) : (
@@ -641,7 +643,7 @@ export function DevicesTable({
 
             <div className="pagination">
                 <div className="pagination-info">
-                    Mostrando {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, total)} de {total}
+                    {t('showing', { start: ((page - 1) * pageSize) + 1, end: Math.min(page * pageSize, total), total: total })}
                 </div>
                 <div className="pagination-controls">
                     <button
@@ -649,17 +651,17 @@ export function DevicesTable({
                         onClick={() => onPageChange(page - 1)}
                         disabled={page <= 1}
                     >
-                        Anterior
+                        {t('previous')}
                     </button>
                     <span style={{ padding: '0 12px', color: '#6b7280' }}>
-                        Página {page} de {totalPages}
+                        {t('page_of', { page: page, totalPages: totalPages })}
                     </span>
                     <button
                         className="btn btn-secondary"
                         onClick={() => onPageChange(page + 1)}
                         disabled={page >= totalPages}
                     >
-                        Siguiente
+                        {t('next')}
                     </button>
                 </div>
             </div>

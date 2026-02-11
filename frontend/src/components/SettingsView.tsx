@@ -3,9 +3,12 @@ import api from '../services/api';
 import type { SystemConfig } from '../services/api';
 import { FolderPicker } from './FolderPicker';
 import { useNotification } from '../context/NotificationContext';
+import { useLanguage } from '../context/LanguageContext';
+import { type Language } from '../i18n/translations';
 
 export function SettingsView() {
     const { showNotification, confirm } = useNotification();
+    const { t, language, setLanguage } = useLanguage();
     const [config, setConfig] = useState<SystemConfig | null>(null);
     const [newPath, setNewPath] = useState('');
     const [newPort, setNewPort] = useState('');
@@ -30,7 +33,7 @@ export function SettingsView() {
             setNewPort(savedPort);
         } catch (error) {
             console.error('Error loading config:', error);
-            showNotification({ type: 'error', title: 'Error de Conexión', message: 'No se pudo conectar con el servidor. Verifica el puerto.' });
+            showNotification({ type: 'error', title: t('error_title'), message: t('loading_data') });
         } finally {
             setLoading(false);
         }
@@ -51,7 +54,7 @@ export function SettingsView() {
             }
         } catch (error) {
             console.error('Error saving path:', error);
-            showNotification({ type: 'error', title: 'Error', message: 'No se pudo actualizar la carpeta.' });
+            showNotification({ type: 'error', title: t('error_title'), message: t('update_folder_error_message') });
         } finally {
             setSaving(false);
         }
@@ -89,8 +92,8 @@ export function SettingsView() {
 
     async function handleClearData() {
         const confirmed = await confirm(
-            'Confirmar Borrado Total',
-            '¿Estás seguro de que deseas borrar TODA la información? Esta acción es irreversible.'
+            t('confirm_clear_title'),
+            t('confirm_clear_message')
         );
 
         if (!confirmed) return;
@@ -114,7 +117,7 @@ export function SettingsView() {
             <div className="card">
                 <div className="card-body" style={{ padding: '40px', textAlign: 'center' }}>
                     <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
-                    <p>Cargando configuración...</p>
+                    <p>{t('loading')}</p>
                 </div>
             </div>
         );
@@ -123,16 +126,34 @@ export function SettingsView() {
     return (
         <div className="card">
             <div className="card-header">
-                <h3 className="card-title">Configuración del Sistema</h3>
+                <h3 className="card-title">{t('system_settings')}</h3>
             </div>
 
             <div className="card-body">
                 <div style={{ maxWidth: '600px' }}>
 
+                    {/* Language Settings */}
+                    <div className="filter-group" style={{ marginBottom: '32px', width: '100%', alignItems: 'flex-start' }}>
+                        <label className="filter-label" style={{ marginBottom: '8px' }}>
+                            {t('language')}
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                            <select
+                                className="filter-select"
+                                style={{ width: '200px', padding: '10px 14px' }}
+                                value={language}
+                                onChange={(e) => setLanguage(e.target.value as Language)}
+                            >
+                                <option value="es">{t('spanish')}</option>
+                                <option value="en">{t('english')}</option>
+                            </select>
+                        </div>
+                    </div>
+
                     {/* Port Configuration */}
                     <div className="filter-group" style={{ marginBottom: '32px', width: '100%', alignItems: 'flex-start' }}>
                         <label className="filter-label" style={{ marginBottom: '8px' }}>
-                            Puerto del Backend (API Port)
+                            {t('api_port')}
                         </label>
                         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                             <input
@@ -148,18 +169,18 @@ export function SettingsView() {
                                 onClick={handleSavePort}
                                 disabled={saving || !newPort}
                             >
-                                Actualizar Conexión
+                                {t('update_connection')}
                             </button>
                         </div>
                         <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
-                            Cambia esto si tu backend está corriendo en un puerto diferente al predeterminado (3001).
+                            {t('port_desc')}
                         </p>
                     </div>
 
                     {/* Folder Configuration */}
                     <div className="filter-group" style={{ marginBottom: '24px', width: '100%', alignItems: 'flex-start' }}>
                         <label className="filter-label" style={{ marginBottom: '8px' }}>
-                            Carpeta de Monitoreo (Watch Folder)
+                            {t('watch_folder')}
                         </label>
                         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                             <div style={{ flex: 1, position: 'relative' }}>
@@ -170,39 +191,39 @@ export function SettingsView() {
                                     value={newPath}
                                     readOnly
                                     onClick={() => setIsPickerOpen(true)}
-                                    placeholder="Selecciona una carpeta..."
+                                    placeholder={t('select_folder') + '...'}
                                 />
                             </div>
                             <button
                                 className="btn"
                                 onClick={() => setIsPickerOpen(true)}
                             >
-                                📁 Seleccionar
+                                📁 {t('select_folder')}
                             </button>
                             <button
                                 className="btn btn-primary"
                                 onClick={handleSavePath}
                                 disabled={saving || !newPath || newPath === config?.watch_folder}
                             >
-                                {saving ? 'Guardando...' : 'Guardar Carpeta'}
+                                {saving ? t('saving') : t('save_folder')}
                             </button>
                         </div>
                         <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
-                            Ruta absoluta a la carpeta que contiene los archivos de validación Excel.
+                            {t('folder_desc')}
                         </p>
                     </div>
 
                     <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px', marginTop: '24px' }}>
-                        <h4 style={{ marginBottom: '16px', fontSize: '14px', color: '#374151' }}>Estado de Conexión</h4>
+                        <h4 style={{ marginBottom: '16px', fontSize: '14px', color: '#374151' }}>{t('connection_status')}</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div className="kpi-card" style={{ padding: '16px' }}>
-                                <div className="kpi-label">Puerto Activo</div>
+                                <div className="kpi-label">{t('active_port')}</div>
                                 <div className="kpi-value" style={{ fontSize: '18px' }}>{localStorage.getItem('trustonic_api_port') || '3001'}</div>
                             </div>
                             <div className="kpi-card" style={{ padding: '16px' }}>
-                                <div className="kpi-label">Estado Base de Datos</div>
+                                <div className="kpi-label">{t('db_status')}</div>
                                 <div className="kpi-value" style={{ fontSize: '18px', color: config ? '#10b981' : '#ef4444' }}>
-                                    {config ? 'CONECTADA' : 'DESCONECTADA'}
+                                    {config ? t('connected') : t('disconnected')}
                                 </div>
                             </div>
                         </div>
@@ -210,9 +231,9 @@ export function SettingsView() {
 
                     {/* Danger Zone */}
                     <div style={{ borderTop: '1px solid #fee2e2', paddingTop: '24px', marginTop: '48px' }}>
-                        <h4 style={{ marginBottom: '8px', fontSize: '16px', color: '#dc2626', fontWeight: 600 }}>Zona de Peligro</h4>
+                        <h4 style={{ marginBottom: '8px', fontSize: '16px', color: '#dc2626', fontWeight: 600 }}>{t('danger_zone')}</h4>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
-                            Acciones irreversibles sobre la base de datos.
+                            {t('danger_desc')}
                         </p>
                         <button
                             className="btn"
@@ -220,7 +241,7 @@ export function SettingsView() {
                             onClick={handleClearData}
                             disabled={saving}
                         >
-                            🗑️ Borrar Toda la Información
+                            🗑️ {t('clear_all_data')}
                         </button>
                     </div>
                 </div>

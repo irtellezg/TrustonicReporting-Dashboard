@@ -18,10 +18,12 @@ import {
 } from 'recharts';
 import api from '../services/api';
 import type { MonthlyTrack, TrackingOptions } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff7300', '#a4de6c'];
 
 export const CustomerTrackingView: React.FC = () => {
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<MonthlyTrack[]>([]);
     const [options, setOptions] = useState<TrackingOptions>({
@@ -129,7 +131,7 @@ export const CustomerTrackingView: React.FC = () => {
     }, [data, filters.customer]);
 
     if (loading && data.length === 0) {
-        return <div className="loading-container"><div className="loading-spinner"></div><p>Cargando seguimiento...</p></div>;
+        return <div className="loading-container"><div className="loading-spinner"></div><p>{t('loading_data')}</p></div>;
     }
 
     const totalRegistered = data.reduce((acc, curr) => acc + curr.registered, 0);
@@ -142,50 +144,50 @@ export const CustomerTrackingView: React.FC = () => {
             {/* Filters */}
             <div className="filters-bar" style={{ marginBottom: '24px' }}>
                 <div className="filter-group">
-                    <label className="filter-label">Año</label>
+                    <label className="filter-label">{t('year')}</label>
                     <select
                         id="tracking-year-filter"
                         className="filter-select"
                         value={filters.year}
                         onChange={(e) => setFilters(f => ({ ...f, year: e.target.value }))}
                     >
-                        <option value="">Todos los Años</option>
+                        <option value="">{t('all_years')}</option>
                         {options.years.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
                 <div className="filter-group">
-                    <label className="filter-label">Cliente</label>
+                    <label className="filter-label">{t('customer')}</label>
                     <select
                         id="tracking-customer-filter"
                         className="filter-select"
                         value={filters.customer}
                         onChange={(e) => setFilters(f => ({ ...f, customer: e.target.value }))}
                     >
-                        <option value="">Todos los Clientes</option>
+                        <option value="">{t('all_customers')}</option>
                         {options.customers.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
                 <div className="filter-group">
-                    <label className="filter-label">País</label>
+                    <label className="filter-label">{t('country')}</label>
                     <select
                         id="tracking-country-filter"
                         className="filter-select"
                         value={filters.country}
                         onChange={(e) => setFilters(f => ({ ...f, country: e.target.value }))}
                     >
-                        <option value="">Todos los Países</option>
+                        <option value="">{t('all_countries')}</option>
                         {options.countries.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
                 <div className="filter-group">
-                    <label className="filter-label">Solución</label>
+                    <label className="filter-label">{t('solution')}</label>
                     <select
                         id="tracking-solution-filter"
                         className="filter-select"
                         value={filters.solution}
                         onChange={(e) => setFilters(f => ({ ...f, solution: e.target.value }))}
                     >
-                        <option value="">Todas las Soluciones</option>
+                        <option value="">{t('all_solutions')}</option>
                         {options.solutions.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
@@ -195,19 +197,19 @@ export const CustomerTrackingView: React.FC = () => {
                 {/* KPI Cards */}
                 <div className="kpi-grid">
                     <div className="kpi-card testing">
-                        <div className="kpi-label">Total Registrados</div>
+                        <div className="kpi-label">{t('total_registered')}</div>
                         <div className="kpi-value">{totalRegistered.toLocaleString()}</div>
                     </div>
                     <div className="kpi-card completed">
-                        <div className="kpi-label">Total Activados</div>
+                        <div className="kpi-label">{t('total_activated')}</div>
                         <div className="kpi-value">{totalActivated.toLocaleString()}</div>
                     </div>
                     <div className="kpi-card issue">
-                        <div className="kpi-label">Total Facturable</div>
+                        <div className="kpi-label">{t('total_billable')}</div>
                         <div className="kpi-value">{totalBillable.toLocaleString()}</div>
                     </div>
                     <div className="kpi-card cancelled">
-                        <div className="kpi-label">Total No Facturado</div>
+                        <div className="kpi-label">{t('total_non_billable')}</div>
                         <div className="kpi-value">{totalNonBillable.toLocaleString()}</div>
                     </div>
                 </div>
@@ -217,7 +219,7 @@ export const CustomerTrackingView: React.FC = () => {
                     {/* Evolution Chart */}
                     <div className="card chart-container" id="tracking-evolution-chart">
                         <div className="card-header">
-                            <h3 className="card-title">Evolución Temporal: Registros, Activaciones y Facturación</h3>
+                            <h3 className="card-title">{t('evolution_chart_title')}</h3>
                         </div>
                         <div className="card-body">
                             <ResponsiveContainer width="100%" height={350}>
@@ -250,7 +252,7 @@ export const CustomerTrackingView: React.FC = () => {
                                     <Area
                                         type="monotone"
                                         dataKey="Registered"
-                                        name="Registrados"
+                                        name={t('total_registered')}
                                         stroke="#8884d8"
                                         fillOpacity={1}
                                         fill="url(#colorReg)"
@@ -258,7 +260,7 @@ export const CustomerTrackingView: React.FC = () => {
                                     <Area
                                         type="monotone"
                                         dataKey="Activated"
-                                        name="Activados"
+                                        name={t('total_activated')}
                                         stroke="#82ca9d"
                                         fillOpacity={1}
                                         fill="url(#colorAct)"
@@ -266,7 +268,7 @@ export const CustomerTrackingView: React.FC = () => {
                                     <Area
                                         type="monotone"
                                         dataKey="Billable"
-                                        name="Facturables"
+                                        name={t('total_billable')}
                                         stroke="#ffc658"
                                         fillOpacity={1}
                                         fill="url(#colorBill)"
@@ -281,7 +283,7 @@ export const CustomerTrackingView: React.FC = () => {
                     {/* Registered by Customer */}
                     <div className="card chart-container" id="tracking-registered-customer-chart">
                         <div className="card-header">
-                            <h3 className="card-title">Total Registrados</h3>
+                            <h3 className="card-title">{t('total_registered')}</h3>
                         </div>
                         <div className="card-body">
                             <ResponsiveContainer width="100%" height={Math.max(300, registeredData.length * 30)}>
@@ -297,7 +299,7 @@ export const CustomerTrackingView: React.FC = () => {
                                         interval={0}
                                     />
                                     <Tooltip cursor={{ fill: 'var(--gray-100)' }} />
-                                    <Bar dataKey="registered" name="Registrados" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={20}>
+                                    <Bar dataKey="registered" name={t('total_registered')} fill="#8884d8" radius={[0, 4, 4, 0]} barSize={20}>
                                         {registeredData.map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
                                         ))}
@@ -311,7 +313,7 @@ export const CustomerTrackingView: React.FC = () => {
                     {/* Activated by Customer */}
                     <div className="card chart-container" id="tracking-activated-customer-chart">
                         <div className="card-header">
-                            <h3 className="card-title">Total Activados</h3>
+                            <h3 className="card-title">{t('total_activated')}</h3>
                         </div>
                         <div className="card-body">
                             <ResponsiveContainer width="100%" height={Math.max(300, activatedData.length * 30)}>
@@ -327,7 +329,7 @@ export const CustomerTrackingView: React.FC = () => {
                                         interval={0}
                                     />
                                     <Tooltip cursor={{ fill: 'var(--gray-100)' }} />
-                                    <Bar dataKey="activated" name="Activados" fill="#82ca9d" radius={[0, 4, 4, 0]} barSize={20}>
+                                    <Bar dataKey="activated" name={t('total_activated')} fill="#82ca9d" radius={[0, 4, 4, 0]} barSize={20}>
                                         {activatedData.map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
                                         ))}
@@ -342,7 +344,7 @@ export const CustomerTrackingView: React.FC = () => {
                     {filters.customer && solutionDistribution.length > 0 && (
                         <div className="card chart-container" id="tracking-solution-pie-chart">
                             <div className="card-header">
-                                <h3 className="card-title">Distribución de Solución</h3>
+                                <h3 className="card-title">{t('distribution_by_solution')}</h3>
                             </div>
                             <div className="card-body">
                                 <ResponsiveContainer width="100%" height={350}>

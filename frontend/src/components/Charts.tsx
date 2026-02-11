@@ -16,6 +16,7 @@ import {
     LabelList,
 } from 'recharts';
 import type { StatusSummary, RegionSummary, SolutionSummary, BrandSummary, CustomerSummary } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const STATUS_COLORS: Record<string, string> = {
     'Completed': '#10b981',
@@ -54,18 +55,24 @@ const renderCustomBarLabel = (props: any) => {
 };
 
 export function StatusChart({ data }: StatusChartProps) {
+    const { t } = useLanguage();
     const totalDevices = data.reduce((sum, item) => sum + Number(item.device_count), 0);
-    const chartData = data.map((item) => ({
-        name: item.status,
-        count: Number(item.device_count),
-        total: totalDevices,
-        fill: STATUS_COLORS[item.status] || '#6b7280',
-    }));
+    const chartData = data.map((item) => {
+        const statusKey = item.status.toLowerCase().replace(' ', '_');
+        const translatedName = t(statusKey === 'issue' ? 'with_issues' : statusKey);
+
+        return {
+            name: translatedName || item.status,
+            count: Number(item.device_count),
+            total: totalDevices,
+            fill: STATUS_COLORS[item.status] || '#6b7280',
+        };
+    });
 
     return (
         <div className="card">
             <div className="card-header">
-                <h3 className="card-title">Dispositivos por Estado</h3>
+                <h3 className="card-title">{t('devices_by_status')}</h3>
             </div>
             <div className="card-body chart-container" style={{ minHeight: '380px' }}>
                 <ResponsiveContainer width="100%" height={350}>
@@ -114,12 +121,13 @@ interface RegionChartProps {
 }
 
 export function RegionChart({ data }: RegionChartProps) {
+    const { t } = useLanguage();
     const totalDevices = data.reduce((sum, item) => sum + Number(item.total_devices), 0);
     const chartData = [...data]
         .sort((a, b) => Number(b.total_devices) - Number(a.total_devices))
         .slice(0, 10)
         .map((item) => ({
-            name: item.target_region || 'Sin región',
+            name: item.target_region || t('no_region'),
             total: Number(item.total_devices),
             completed: Number(item.completed),
             testing: Number(item.testing),
@@ -130,7 +138,7 @@ export function RegionChart({ data }: RegionChartProps) {
     return (
         <div className="card">
             <div className="card-header">
-                <h3 className="card-title">Dispositivos por Región (Top 10)</h3>
+                <h3 className="card-title">{t('devices_by_region')}</h3>
             </div>
             <div className="card-body chart-container" style={{ minHeight: '420px' }}>
                 <ResponsiveContainer width="100%" height={400}>
@@ -159,10 +167,10 @@ export function RegionChart({ data }: RegionChartProps) {
                             }}
                         />
                         <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '20px' }} />
-                        <Bar dataKey="completed" name="Completados" fill="#10b981" stackId="a" barSize={24} isAnimationActive={false} />
-                        <Bar dataKey="testing" name="En Pruebas" fill="#3b82f6" stackId="a" barSize={24} isAnimationActive={false} />
-                        <Bar dataKey="issues" name="Con Problemas" fill="#f59e0b" stackId="a" barSize={24} isAnimationActive={false} />
-                        <Bar dataKey="cancelled" name="Cancelados" fill="#ef4444" stackId="a" barSize={24} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+                        <Bar dataKey="completed" name={t('completed')} fill="#10b981" stackId="a" barSize={24} isAnimationActive={false} />
+                        <Bar dataKey="testing" name={t('testing')} fill="#3b82f6" stackId="a" barSize={24} isAnimationActive={false} />
+                        <Bar dataKey="issues" name={t('with_issues')} fill="#f59e0b" stackId="a" barSize={24} isAnimationActive={false} />
+                        <Bar dataKey="cancelled" name={t('cancelled')} fill="#ef4444" stackId="a" barSize={24} radius={[0, 4, 4, 0]} isAnimationActive={false}>
                             {/* @ts-ignore */}
                             <LabelList dataKey="total" content={(props: any) => {
                                 const { x, y, width, height, value } = props;
@@ -186,8 +194,9 @@ interface SolutionChartProps {
 }
 
 export function SolutionChart({ data }: SolutionChartProps) {
+    const { t } = useLanguage();
     const chartData = data.map((item, index) => ({
-        name: item.target_solution || 'Sin solución',
+        name: item.target_solution || t('no_solution'),
         value: Number(item.total_devices),
         fill: CHART_COLORS[index % CHART_COLORS.length],
     }));
@@ -195,7 +204,7 @@ export function SolutionChart({ data }: SolutionChartProps) {
     return (
         <div className="card">
             <div className="card-header">
-                <h3 className="card-title">Distribución por Solución</h3>
+                <h3 className="card-title">{t('distribution_by_solution')}</h3>
             </div>
             <div className="card-body chart-container" style={{ minHeight: '450px' }}>
                 <ResponsiveContainer width="100%" height={420}>
@@ -237,6 +246,7 @@ interface BrandChartProps {
 }
 
 export function BrandChart({ data }: BrandChartProps) {
+    const { t } = useLanguage();
     const totalDevices = data.reduce((sum, item) => sum + Number(item.device_count), 0);
     const chartData = data.map((item, index) => ({
         name: item.brand,
@@ -248,7 +258,7 @@ export function BrandChart({ data }: BrandChartProps) {
     return (
         <div className="card">
             <div className="card-header">
-                <h3 className="card-title">Dispositivos por Marca</h3>
+                <h3 className="card-title">{t('devices_by_brand')}</h3>
             </div>
             <div className="card-body chart-container" style={{ minHeight: '380px' }}>
                 <ResponsiveContainer width="100%" height={350}>
@@ -291,6 +301,7 @@ interface CustomerChartProps {
 }
 
 export function CustomerChart({ data }: CustomerChartProps) {
+    const { t } = useLanguage();
     const totalDevices = data.reduce((sum, item) => sum + Number(item.device_count), 0);
     const chartData = data.map((item, index) => ({
         name: item.customer,
@@ -302,7 +313,7 @@ export function CustomerChart({ data }: CustomerChartProps) {
     return (
         <div className="card">
             <div className="card-header">
-                <h3 className="card-title">Dispositivos por Cliente</h3>
+                <h3 className="card-title">{t('devices_by_customer')}</h3>
             </div>
             <div className="card-body chart-container" style={{ minHeight: '480px' }}>
                 <ResponsiveContainer width="100%" height={450}>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import api, { type InventoryItem } from '../services/api';
 import { useNotification } from '../context/NotificationContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface InventoryTableProps {
     items: InventoryItem[];
@@ -12,6 +13,7 @@ interface InventoryTableProps {
 
 export function InventoryTable({ items, loading, total, onRefresh, onRefreshWithParams }: InventoryTableProps) {
     const { showNotification, confirm } = useNotification();
+    const { t, language } = useLanguage();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [deleting, setDeleting] = useState(false);
 
@@ -262,8 +264,8 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
         if (ids.length === 0) return;
 
         const confirmed = await confirm(
-            'Eliminar Inventario',
-            `¿Estás seguro de que deseas eliminar los ${ids.length} ítems de inventario seleccionados?`
+            t('confirm_delete_title'),
+            t('confirm_delete_message', { count: ids.length })
         );
 
         if (!confirmed) return;
@@ -274,16 +276,16 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
             setSelectedIds(new Set());
             showNotification({
                 type: 'success',
-                title: 'Eliminados',
-                message: `${ids.length} ítems de inventario han sido eliminados.`
+                title: t('success_title'),
+                message: t('success_title')
             });
             onRefresh();
         } catch (error) {
             console.error('Error deleting inventory:', error);
             showNotification({
                 type: 'error',
-                title: 'Error al Eliminar',
-                message: error instanceof Error ? error.message : 'No se pudieron eliminar los registros.'
+                title: t('error_title'),
+                message: error instanceof Error ? error.message : t('error_title')
             });
         } finally {
             setDeleting(false);
@@ -297,7 +299,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
         return (
             <div style={{ padding: '60px', textAlign: 'center' }}>
                 <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
-                <p style={{ color: '#6b7280', fontWeight: 500 }}>Cargando inventario...</p>
+                <p style={{ color: '#6b7280', fontWeight: 500 }}>{t('loading_inventory')}</p>
             </div>
         );
     }
@@ -333,7 +335,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                         gap: '8px'
                     }}>
                         <div className="loading-spinner" style={{ width: '16px', height: '16px' }}></div>
-                        Filtrando...
+                        {t('filtering')}
                     </div>
                 </div>
             )}
@@ -341,7 +343,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
             {/* Header */}
             <div className="card-header" style={{ borderBottom: 'none', paddingBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h3 className="card-title" style={{ margin: 0 }}>
-                    Ítemes de Inventario
+                    {t('inventory_items')}
                     <span style={{
                         marginLeft: '8px',
                         fontSize: '14px',
@@ -361,7 +363,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                         onClick={handleDeleteSelected}
                         disabled={deleting}
                     >
-                        🗑️ Eliminar ({selectedIds.size})
+                        🗑️ {t('delete_selected', { count: selectedIds.size })}
                     </button>
                 )}
             </div>
@@ -395,7 +397,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                         }}>🔍</span>
                         <input
                             type="text"
-                            placeholder="Buscar por marca, nombre comercial, modelo, IMEI o número de serie..."
+                            placeholder={t('search_placeholder_inventory') || "Buscar por marca, nombre comercial, modelo, IMEI o número de serie..."}
                             style={{
                                 width: '100%',
                                 padding: '14px 16px 14px 48px',
@@ -494,7 +496,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px'
                         }}>
-                            Marca
+                            {t('brand')}
                         </label>
                         <select
                             value={brandFilter}
@@ -511,7 +513,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                 transition: 'border-color 0.2s'
                             }}
                         >
-                            <option value="">Todas las marcas</option>
+                            <option value="">{t('all_brands')}</option>
                             {allBrands.map((b: string) => <option key={b} value={b}>{b}</option>)}
                         </select>
                     </div>
@@ -527,7 +529,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px'
                         }}>
-                            Cliente
+                            {t('customer')}
                         </label>
                         <select
                             value={customerFilter}
@@ -544,7 +546,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                 transition: 'border-color 0.2s'
                             }}
                         >
-                            <option value="">Todos los clientes</option>
+                            <option value="">{t('all_customers')}</option>
                             {inventoryOptions?.customers.map((c: string) => (
                                 <option key={c} value={c}>{c}</option>
                             ))}
@@ -562,12 +564,12 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px'
                         }}>
-                            Fecha Recibido
+                            {t('received_date')}
                         </label>
                         <div style={{ position: 'relative' }}>
                             <input
                                 type="text"
-                                placeholder="Buscar fecha..."
+                                placeholder={t('date_placeholder') || "Buscar fecha..."}
                                 value={receivedFilter}
                                 onChange={handleReceivedChange}
                                 onKeyDown={handleDateKeyDown}
@@ -669,7 +671,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                ✕ Limpiar filtros
+                                ✕ {t('clear_filters')}
                             </button>
                         </div>
                     )}
@@ -685,7 +687,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                         paddingTop: '16px',
                         borderTop: '1px solid #e2e8f0'
                     }}>
-                        <span style={{ fontSize: '12px', color: '#64748b', marginRight: '4px' }}>Filtros activos:</span>
+                        <span style={{ fontSize: '12px', color: '#64748b', marginRight: '4px' }}>{t('active_filters')}:</span>
                         {brandFilter && (
                             <span style={{
                                 background: '#dbeafe',
@@ -695,7 +697,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                 fontSize: '12px',
                                 fontWeight: 500
                             }}>
-                                Marca: {brandFilter}
+                                {t('brand')}: {brandFilter}
                             </span>
                         )}
                         {customerFilter && (
@@ -707,7 +709,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                 fontSize: '12px',
                                 fontWeight: 500
                             }}>
-                                Cliente: {customerFilter}
+                                {t('customer')}: {customerFilter}
                             </span>
                         )}
                         {receivedFilter && (
@@ -719,7 +721,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                 fontSize: '12px',
                                 fontWeight: 500
                             }}>
-                                Fecha: {receivedFilter}
+                                {t('received_date')}: {receivedFilter}
                             </span>
                         )}
                         {searchTerm && (
@@ -731,7 +733,7 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                 fontSize: '12px',
                                 fontWeight: 500
                             }}>
-                                Búsqueda: "{searchTerm}"
+                                {t('search')}: "{searchTerm}"
                             </span>
                         )}
                     </div>
@@ -743,17 +745,17 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                 <div style={{ padding: '60px', textAlign: 'center', color: '#6b7280' }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
                     <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
-                        Sin resultados
+                        {t('no_results')}
                     </h3>
                     <p style={{ fontSize: '14px', maxWidth: '300px', margin: '0 auto' }}>
-                        No hemos encontrado registros que coincidan con tus filtros.
+                        {t('no_results_desc')}
                     </p>
                     <button
                         className="btn btn-secondary"
                         style={{ marginTop: '16px' }}
                         onClick={handleClearFilters}
                     >
-                        Limpiar Filtros
+                        {t('clear_filters')}
                     </button>
                 </div>
             )}
@@ -772,17 +774,17 @@ export function InventoryTable({ items, loading, total, onRefresh, onRefreshWith
                                         onChange={toggleSelectAll}
                                     />
                                 </th>
-                                <th>Marca</th>
-                                <th>Nombre Comercial</th>
-                                <th>Modelo</th>
+                                <th>{t('brand')}</th>
+                                <th>{t('marketing_name') || 'Nombre Comercial'}</th>
+                                <th>{t('model')}</th>
                                 <th>S/N</th>
                                 <th>IMEIs</th>
-                                <th>Cliente</th>
-                                <th>Recibido</th>
-                                <th>Estado</th>
+                                <th>{t('customer')}</th>
+                                <th>{t('received')} || 'Recibido'</th>
+                                <th>{t('status')}</th>
                                 <th>Remark</th>
-                                <th>Comentarios</th>
-                                <th>Solución</th>
+                                <th>{t('comments')}</th>
+                                <th>{t('solution')}</th>
                             </tr>
                         </thead>
                         <tbody>

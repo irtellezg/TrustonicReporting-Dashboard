@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { api, type DirectoryListing } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface FolderPickerProps {
     isOpen: boolean;
@@ -12,6 +13,7 @@ interface FolderPickerProps {
 }
 
 export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderPickerProps) {
+    const { t } = useLanguage();
     const [listing, setListing] = useState<DirectoryListing | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderP
             setCurrentPath(data.currentPath);
         } catch (err) {
             console.error('Error loading path:', err);
-            setError(`No se pudo acceder a: ${path}. Es posible que no tengas permisos o la ruta no exista.`);
+            setError(t('folder_access_error', { path }));
         } finally {
             setLoading(false);
         }
@@ -51,13 +53,13 @@ export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderP
         }}>
             <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 className="card-title">Seleccionar Carpeta</h3>
+                    <h3 className="card-title">{t('select_folder_title')}</h3>
                     <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
                 </div>
 
                 <div className="card-body" style={{ overflowY: 'auto', padding: '16px' }}>
                     <div style={{ marginBottom: '16px', fontSize: '14px', color: '#6b7280', wordBreak: 'break-all' }}>
-                        Ruta actual: <strong>{currentPath}</strong>
+                        {t('current_path')}: <strong>{currentPath}</strong>
                     </div>
 
                     {loading ? (
@@ -68,7 +70,7 @@ export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderP
                         <div style={{ textAlign: 'center', padding: '20px' }}>
                             <div style={{ color: '#ef4444', marginBottom: '16px' }}>{error}</div>
                             <button className="btn" onClick={() => loadPath('C:\\')}>
-                                Volver a C:\
+                                {t('back_to_root')}
                             </button>
                         </div>
                     ) : (
@@ -79,7 +81,7 @@ export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderP
                                     style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px', backgroundColor: '#f3f4f6' }}
                                     onClick={() => loadPath(listing.parentPath!)}
                                 >
-                                    📁 .. (Carpeta anterior)
+                                    📁 .. ({t('parent_folder')})
                                 </div>
                             )}
                             {listing?.directories.map((dir: { name: string, path: string }) => (
@@ -94,7 +96,7 @@ export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderP
                             ))}
                             {listing?.directories.length === 0 && (
                                 <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>
-                                    No hay subcarpetas en esta ubicación.
+                                    {t('no_subfolders')}
                                 </div>
                             )}
                         </div>
@@ -102,13 +104,13 @@ export function FolderPicker({ isOpen, onClose, onSelect, initialPath }: FolderP
                 </div>
 
                 <div className="card-footer" style={{ borderTop: '1px solid #e5e7eb', padding: '16px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button className="btn" onClick={onClose}>Cancelar</button>
+                    <button className="btn" onClick={onClose}>{t('cancel')}</button>
                     <button
                         className="btn btn-primary"
                         disabled={!listing}
                         onClick={() => listing && onSelect(listing.currentPath)}
                     >
-                        Seleccionar esta carpeta
+                        {t('select_this_folder')}
                     </button>
                 </div>
             </div>

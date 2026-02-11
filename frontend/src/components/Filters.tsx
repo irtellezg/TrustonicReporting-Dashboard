@@ -2,6 +2,7 @@
  * TrustonicReporting - Filters Component
  */
 import type { FilterOptions } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface FiltersProps {
     filters: {
@@ -17,18 +18,19 @@ interface FiltersProps {
 }
 
 export function Filters({ filters, options, onChange, onClear }: FiltersProps) {
+    const { t } = useLanguage();
     const hasActiveFilters = Object.values(filters).some((v) => v !== '');
 
     return (
         <div className="filters-bar">
             <div className="filter-group">
-                <label className="filter-label">Marca</label>
+                <label className="filter-label">{t('brand')}</label>
                 <select
                     className="filter-select"
                     value={filters.brand}
                     onChange={(e) => onChange('brand', e.target.value)}
                 >
-                    <option value="">Todas las marcas</option>
+                    <option value="">{t('all_brands')}</option>
                     {options?.brands.map((brand) => (
                         <option key={brand} value={brand}>
                             {brand}
@@ -38,13 +40,13 @@ export function Filters({ filters, options, onChange, onClear }: FiltersProps) {
             </div>
 
             <div className="filter-group">
-                <label className="filter-label">Región</label>
+                <label className="filter-label">{t('region')}</label>
                 <select
                     className="filter-select"
                     value={filters.region}
                     onChange={(e) => onChange('region', e.target.value)}
                 >
-                    <option value="">Todas las regiones</option>
+                    <option value="">{t('all_regions')}</option>
                     {options?.regions.map((region) => (
                         <option key={region} value={region}>
                             {region}
@@ -54,13 +56,13 @@ export function Filters({ filters, options, onChange, onClear }: FiltersProps) {
             </div>
 
             <div className="filter-group">
-                <label className="filter-label">Cliente</label>
+                <label className="filter-label">{t('customer')}</label>
                 <select
                     className="filter-select"
                     value={filters.customer}
                     onChange={(e) => onChange('customer', e.target.value)}
                 >
-                    <option value="">Todos los clientes</option>
+                    <option value="">{t('all_customers')}</option>
                     {options?.customers.map((customer) => (
                         <option key={customer} value={customer}>
                             {customer}
@@ -70,13 +72,13 @@ export function Filters({ filters, options, onChange, onClear }: FiltersProps) {
             </div>
 
             <div className="filter-group">
-                <label className="filter-label">Estado</label>
+                <label className="filter-label">{t('status')}</label>
                 <select
                     className="filter-select"
                     value={filters.status}
                     onChange={(e) => onChange('status', e.target.value)}
                 >
-                    <option value="">Todos los estados</option>
+                    <option value="">{t('all_statuses')}</option>
                     {options?.statuses.map((status) => (
                         <option key={status} value={status}>
                             {status}
@@ -86,13 +88,13 @@ export function Filters({ filters, options, onChange, onClear }: FiltersProps) {
             </div>
 
             <div className="filter-group">
-                <label className="filter-label">Solución</label>
+                <label className="filter-label">{t('solution')}</label>
                 <select
                     className="filter-select"
                     value={filters.solution}
                     onChange={(e) => onChange('solution', e.target.value)}
                 >
-                    <option value="">Todas las soluciones</option>
+                    <option value="">{t('all_solutions')}</option>
                     {options?.solutions.map((solution) => (
                         <option key={solution} value={solution}>
                             {solution}
@@ -105,7 +107,7 @@ export function Filters({ filters, options, onChange, onClear }: FiltersProps) {
                 <div className="filter-group" style={{ justifyContent: 'flex-end' }}>
                     <label className="filter-label">&nbsp;</label>
                     <button className="btn btn-secondary" onClick={onClear}>
-                        Limpiar filtros
+                        {t('clear_filters')}
                     </button>
                 </div>
             )}

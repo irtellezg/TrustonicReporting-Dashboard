@@ -25,12 +25,14 @@ import { SettingsView } from './components/SettingsView';
 import { InventoryTable } from './components/InventoryTable';
 import { CustomerTrackingView } from './components/CustomerTrackingView';
 import { useNotification } from './context/NotificationContext';
+import { useLanguage } from './context/LanguageContext';
 
 
 type View = 'dashboard' | 'devices' | 'inventory' | 'tracking' | 'settings';
 
 function App() {
   const { showNotification } = useNotification();
+  const { t } = useLanguage();
   const [view, setView] = useState<View>('dashboard');
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +78,7 @@ function App() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      console.log('📂 Cargando dashboard y filtros (con filtros)...');
+      console.log('📂 Loading dashboard and filters...');
 
       const commonParams: Record<string, string> = {};
       if (filters.region) commonParams.region = filters.region;
@@ -112,8 +114,8 @@ function App() {
       console.error('Error loading dashboard data:', err);
       showNotification({
         type: 'error',
-        title: 'Error de Datos',
-        message: 'No se pudieron cargar los datos del sistema.'
+        title: t('error_title'),
+        message: t('loading_data')
       });
     } finally {
       setLoading(false);
@@ -199,8 +201,8 @@ function App() {
 
       showNotification({
         type: 'info',
-        title: 'Actualización automática',
-        message: 'Los datos se han sincronizado en tiempo real.',
+        title: t('info_title'),
+        message: t('success_title'),
         duration: 3000
       });
 
@@ -244,8 +246,8 @@ function App() {
     try {
       showNotification({
         type: 'info',
-        title: 'Generando Reporte',
-        message: 'Obteniendo datos completos para el PDF...',
+        title: t('loading'),
+        message: t('loading_data'),
       });
 
       if (view === 'tracking') {
@@ -266,13 +268,13 @@ function App() {
 
         // Exportación específica para seguimiento
         await exportToPDF({
-          title: `Seguimiento de Clientes ${filterWording}`.trim(),
-          subtitle: `Generado el ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+          title: `${t('tracking')} ${filterWording}`.trim(),
+          subtitle: `${t('generated_on')} ${new Date().toLocaleDateString()}`,
           filters: {
-            Año: yearVal,
-            Cliente: customerVal,
-            País: countryVal,
-            Solución: solutionVal
+            [t('year')]: yearVal,
+            [t('customer')]: customerVal,
+            [t('country')]: countryVal,
+            [t('solution')]: solutionVal
           },
           chartsElement: document.querySelector('.tracking-report-content') as HTMLElement || undefined,
         });
@@ -306,23 +308,19 @@ function App() {
         if (filters.brand) activeFilterValues.push(filters.brand);
 
         const filterWording = activeFilterValues.length > 0
-          ? `Solo para ${activeFilterValues.join(', ')}`
-          : 'Reporte General';
+          ? `${t('only_for')} ${activeFilterValues.join(', ')}`
+          : t('general_report');
 
         await exportToPDF({
-          title: `Validación: ${filterWording}`,
-          subtitle: `Generado el ${new Date().toLocaleDateString('es-MX', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}`,
+          title: `${t('validation')}: ${filterWording}`,
+          subtitle: `${t('generated_on')} ${new Date().toLocaleDateString()}`,
           filters: {
-            Región: filters.region,
-            Cliente: filters.customer,
-            Estado: filters.status,
-            Solución: filters.solution,
-            Marca: filters.brand,
-            Búsqueda: filters.search,
+            [t('region')]: filters.region,
+            [t('customer')]: filters.customer,
+            [t('status')]: filters.status,
+            [t('solution')]: filters.solution,
+            [t('brand')]: filters.brand,
+            [t('search')]: filters.search,
           },
           kpis: kpis || undefined,
           devices: result.devices,
@@ -332,15 +330,15 @@ function App() {
 
       showNotification({
         type: 'success',
-        title: 'Reporte listo',
-        message: 'El PDF se ha generado correctamente.',
+        title: t('success_title'),
+        message: t('success_title'),
       });
     } catch (err) {
       console.error('Error generating PDF:', err);
       showNotification({
         type: 'error',
-        title: 'Error de Exportación',
-        message: 'No se pudo generar el reporte PDF.',
+        title: t('error_title'),
+        message: t('error_title'),
       });
     } finally {
       setLoading(false);
@@ -362,44 +360,37 @@ function App() {
             onClick={() => setView('dashboard')}
           >
             <span>📊</span>
-            Dashboard
+            {t('dashboard')}
           </div>
           <div
             className={`nav-item ${view === 'devices' ? 'active' : ''}`}
             onClick={() => setView('devices')}
           >
             <span>📱</span>
-            Dispositivos
+            {t('devices')}
           </div>
           <div
             className={`nav-item ${view === 'inventory' ? 'active' : ''}`}
             onClick={() => setView('inventory')}
           >
             <span>📦</span>
-            Inventario
+            {t('inventory')}
           </div>
           <div
             className={`nav-item ${view === 'tracking' ? 'active' : ''}`}
             onClick={() => setView('tracking')}
           >
             <span>📈</span>
-            Seguimiento
+            {t('tracking')}
           </div>
           <div
             className={`nav-item ${view === 'settings' ? 'active' : ''}`}
             onClick={() => setView('settings')}
           >
             <span>⚙️</span>
-            Configuración
+            {t('settings')}
           </div>
         </nav>
-
-        <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
-          <div className="nav-item" onClick={loadDashboardData}>
-            <span>🔄</span>
-            Actualizar
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
@@ -407,15 +398,15 @@ function App() {
         {/* Header */}
         <div className="page-header">
           <h1 className="page-title">
-            {view === 'dashboard' ? 'Dashboard de Validación' :
-              view === 'devices' ? 'Lista de Dispositivos' :
-                view === 'inventory' ? 'Inventario de Dispositivos' :
-                  view === 'tracking' ? 'Seguimiento de Clientes' : 'Configuración del Sistema'}
+            {view === 'dashboard' ? t('validation_dashboard') :
+              view === 'devices' ? t('device_list') :
+                view === 'inventory' ? t('inventory_items') :
+                  view === 'tracking' ? t('customer_tracking') : t('system_settings')}
           </h1>
           <div className="header-actions">
             {view !== 'settings' && (
               <button className="btn btn-primary" onClick={handleExportPDF}>
-                📄 Exportar PDF
+                📄 {t('export_pdf')}
               </button>
             )}
           </div>
